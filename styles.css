@@ -70,19 +70,8 @@ legend { padding: 0; }
 .header-inner { display: flex; justify-content: space-between; align-items: center; min-height: 70px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font: 780 25px/1 var(--heading); letter-spacing: -.8px; color: var(--forest); }
 .brand-icon { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 10px; color: white; background: var(--flag-red); font-size: 25px; }
-nav { display: flex; align-items: center; gap: 23px; font-size: 14px; font-weight: 650; }
+nav { font-size: 14px; font-weight: 650; }
 .nav-current { color: var(--forest); }
-.api-trigger, .site-footer button, .reset-button, .close-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: transparent;
-  color: var(--forest);
-}
-.api-trigger { min-height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; font-weight: 650; }
-.api-trigger .icon { font-size: 18px; }
-.api-trigger:hover { background: var(--frozen); border-color: var(--teal); }
 
 .hero { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 45px 0 34px; }
 h1, h2, p { margin: 0; }
@@ -145,8 +134,20 @@ textarea { display: block; width: 100%; min-height: 70px; padding: 10px 12px; re
 .input-wrap:has([aria-invalid="true"]), textarea[aria-invalid="true"], .color-field:has([aria-invalid="true"]) { border-color: var(--flag-red); }
 
 .appearance-heading { margin: 19px 0 13px; padding-top: 17px; border-top: 1px solid #e9efeb; }
-.reset-button { margin-left: auto; padding: 6px 0 6px 6px; border: 0; color: var(--muted); font-size: 12px; font-weight: 600; border-radius: 4px; }
-.reset-button:hover, .site-footer button:hover { color: var(--flag-red); }
+.reset-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 0 6px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.reset-button:hover { color: var(--flag-red); }
 .reset-button .icon { font-size: 17px; }
 .two-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .color-field { padding: 0 10px; gap: 8px; }
@@ -204,21 +205,7 @@ textarea { display: block; width: 100%; min-height: 70px; padding: 10px 12px; re
 .formats .choice > span .icon { font-size: 18px; }
 .download-button { margin-top: 12px; }
 
-.site-footer { display: flex; justify-content: space-between; align-items: center; min-height: 61px; padding-block: 12px; color: var(--muted); font-size: 12px; }
-.site-footer > span { font-weight: 680; }
-.site-footer button { padding: 5px 0 5px 5px; border: 0; color: inherit; border-radius: 4px; font-size: inherit; }
-.site-footer .icon { font-size: 14px; }
-
-dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 24px; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); box-shadow: 0 16px 50px #003e1f22; }
-dialog::backdrop { background: rgb(0 37 18 / 42%); }
-.dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.dialog-header form { margin: 0; }
-.close-button { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; }
-.close-button:hover { background: var(--frozen); }
-dialog p { margin-top: 14px; color: var(--muted); font-size: 14px; line-height: 1.58; }
-dialog pre { overflow: auto; margin: 14px 0; padding: 11px; border-radius: 8px; background: #eff6f1; font-size: 12px; }
-.api-docs { display: inline-flex; align-items: center; gap: 5px; color: var(--forest); font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.api-docs .icon { font-size: 16px; }
+.site-footer { display: flex; align-items: center; min-height: 61px; padding-block: 12px; color: var(--muted); font-size: 12px; font-weight: 680; }
 .noscript { padding: 10px; color: var(--flag-red); text-align: center; }
 
 @media (max-width: 890px) {
@@ -235,8 +222,7 @@ dialog pre { overflow: auto; margin: 14px 0; padding: 11px; border-radius: 8px; 
   .header-inner { min-height: 61px; }
   .brand { font-size: 23px; }
   .brand-icon { width: 35px; height: 35px; }
-  nav { gap: 15px; font-size: 13px; }
-  .api-trigger { min-height: 34px; padding-inline: 8px; }
+  nav { font-size: 13px; }
   .hero { padding: 32px 0 24px; }
   .hero h1 { font-size: clamp(43px, 9vw, 65px); line-height: .99; }
   .hero em { display: block; }

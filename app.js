@@ -18,12 +18,11 @@ const colors = {
   foreground: { picker: byId("foreground-picker"), hex: byId("foreground-hex") },
   background: { picker: byId("background-picker"), hex: byId("background-hex") },
 };
-const statusLabels = { example: "Exemplo", pending: "Aguardando", loading: "Gerando", ready: "Pronto", local: "Modo local" };
+const statusLabels = { example: "Exemplo", pending: "Aguardando", loading: "Gerando", ready: "Pronto" };
 
 let active = { type: "link", source: sampleLink, payload: `${sampleLink}/`, isExample: true };
 let cachedMatrix;
 let pendingRequest;
-let localFallback = false;
 let previewAvailable = false;
 let downloading = false;
 
@@ -186,13 +185,10 @@ function updatePreviewState() {
     message = "Gere novamente para atualizar o conteúdo da prévia.";
   } else if (pendingRequest) {
     state = "loading";
-    message = "Gerando seu QR Code com o QuickChart.";
+    message = "Gerando seu QR Code.";
   } else if (!previewAvailable) {
     state = "pending";
     message = "Reduza o conteúdo ou o nível de correção de erros.";
-  } else if (localFallback) {
-    state = "local";
-    message = "A API está indisponível. Prévia gerada no navegador.";
   }
 
   const status = byId("preview-status");
@@ -253,7 +249,6 @@ editor.addEventListener("submit", async (event) => {
 
   showContentError();
   active = { type: draft.type, source: draft.source, payload, isExample: false };
-  localFallback = false;
   updateAppearance();
   const look = getAppearance();
   const request = new AbortController();
@@ -274,7 +269,7 @@ editor.addEventListener("submit", async (event) => {
       image.close();
     }
   } catch {
-    if (pendingRequest === request) localFallback = true;
+    // Aproveita a prévia local quando a geração externa falha.
   } finally {
     clearTimeout(timeout);
     if (pendingRequest === request) {
@@ -392,11 +387,6 @@ downloadButton.addEventListener("click", async () => {
     updatePreviewState();
   }
 });
-
-const apiDialog = byId("api-dialog");
-for (const trigger of document.querySelectorAll("[data-api]")) {
-  trigger.addEventListener("click", () => apiDialog.showModal());
-}
 
 updateAppearance();
 updateDraft();
