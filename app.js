@@ -8,33 +8,61 @@ const defaults = { foreground: "#003E1F", background: "#FFFFFF", style: "square"
 const editor = byId("editor");
 const linkInput = byId("link-value");
 const textInput = byId("text-value");
+const generateButton = editor.querySelector('button[type="submit"]');
 const canvas = byId("qr-preview");
 const context = canvas.getContext("2d");
 const contentError = byId("content-error");
 const colorMessage = byId("color-message");
 const downloadButton = byId("download");
 const downloadError = byId("download-error");
+const previewMediaLink = byId("preview-media-link");
+const mediaInputs = Object.fromEntries(["image", "audio"].map((type) => [type, {
+  url: byId(`${type}-value`),
+  file: byId(`${type}-file`),
+  wrap: byId(`${type}-wrap`),
+  linkToggle: byId(`${type}-link-toggle`),
+  linkOption: byId(`${type}-link-option`),
+}]));
+const mediaFormat = {
+  png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif",
+  mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg",
+  m4a: "audio/mp4", flac: "audio/flac",
+};
+const mediaSize = { image: 10, audio: 25 };
+const cloudName = document.querySelector('[name="qrs-storage-cloud"]').content.trim();
+const cloudPreset = document.querySelector('[name="qrs-storage-preset"]').content.trim();
+const hasCloudStorage = [cloudName, cloudPreset].every((value) => /^[\w-]+$/.test(value));
+const uploadedFiles = new WeakMap();
 const colors = {
   foreground: { picker: byId("foreground-picker"), hex: byId("foreground-hex") },
   background: { picker: byId("background-picker"), hex: byId("background-hex") },
 };
-const statusLabels = { example: "Exemplo", pending: "Aguardando", loading: "Gerando", ready: "Pronto" };
+const statusLabels = { example: "Exemplo", pending: "Aguardando", uploading: "Enviando", loading: "Gerando", ready: "Pronto" };
 
 let active = { type: "link", source: sampleLink, payload: `${sampleLink}/`, isExample: true };
 let cachedMatrix;
 let pendingRequest;
+let pendingUpload;
 let previewAvailable = false;
 let downloading = false;
 
 function getDraft() {
   const type = selected("content-type").value;
+  const media = mediaInputs[type];
+  if (media) {
+    const file = media.file.files[0];
+    const input = file || media.linkOption.hidden ? media.file : media.url;
+    return { type, input, source: file ?? input.value.trim(), file };
+  }
   const input = type === "link" ? linkInput : textInput;
-  return { type, input, source: type === "link" ? input.value.trim() : input.value };
+  return { type, input, source: type === "text" ? input.value : input.value.trim() };
 }
 
 function validateContent(draft) {
   if (!draft.source.trim()) {
-    throw new Error(draft.type === "link" ? "Digite um endereço para gerar o QR Code." : "Digite um texto para gerar o QR Code.");
+    if (draft.type === "text") throw new Error("Digite um texto para gerar o QR Code.");
+    if (mediaInputs[draft.type]) throw new Error("Escolha um arquivo ou use um link público.");
+    throw new Error("Digite um endereço para gerar o QR Code.");
   }
   if (draft.type === "text") return draft.source;
 
@@ -43,6 +71,7 @@ function validateContent(draft) {
     const hasScheme = /^[a-z][a-z\d+.-]*:\/\//i.test(draft.source);
     const address = new URL(hasScheme ? draft.source : `https://${draft.source.replace(/^\/\//, "")}`);
     if (!["http:", "https:"].includes(address.protocol)) throw new Error();
+    if (mediaInputs[draft.type] && (address.username || address.password)) throw new Error();
     return address.href;
   } catch {
     throw new Error("Digite um endereço válido, como https://seusite.com.");
@@ -50,11 +79,58 @@ function validateContent(draft) {
 }
 
 function showContentError(message = "", input = getDraft().input) {
-  linkInput.removeAttribute("aria-invalid");
-  textInput.removeAttribute("aria-invalid");
+  editor.querySelectorAll(".content-field [aria-invalid]").forEach((field) => field.removeAttribute("aria-invalid"));
   contentError.textContent = message;
   contentError.hidden = !message;
   if (message) input.setAttribute("aria-invalid", "true");
+}
+
+function validateFile(file, type) {
+  const extension = file.name.split(".").pop().toLowerCase();
+  const mime = Object.hasOwn(mediaFormat, extension) ? mediaFormat[extension] : "";
+  if (!mime.startsWith(`${type}/`)) throw new Error("Escolha um arquivo em um dos formatos indicados.");
+  if (!file.size) throw new Error("O arquivo está vazio. Escolha outro arquivo.");
+  if (file.size > mediaSize[type] * 1_000_000) throw new Error(`O arquivo deve ter até ${mediaSize[type]} MB.`);
+  return mime;
+}
+
+async function uploadToCloud({ file, type }, signal) {
+  const resource = type === "audio" ? "video" : "image";
+  const body = new FormData();
+  body.append("file", file);
+  body.append("upload_preset", cloudPreset);
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resource}/upload`, { method: "POST", body, signal });
+  if (!response.ok) throw new Error("Não foi possível publicar o arquivo. Tente novamente ou use um link público.");
+  const data = await response.json();
+  const url = new URL(data.secure_url);
+  if (url.origin !== "https://res.cloudinary.com" || !url.pathname.startsWith(`/${cloudName}/${resource}/upload/`)) {
+    throw new Error("O armazenamento não retornou um link público para o arquivo.");
+  }
+  return url;
+}
+
+async function uploadPublicMedia({ file, type }, mime, signal) {
+  const extension = file.name.split(".").pop().toLowerCase();
+  const name = type === "image" ? `imagem.${extension}` : `audio.${extension}`;
+  const body = new FormData();
+  body.set("file", new Blob([file], { type: mime }), name);
+  const response = await fetch("https://waifuvault.moe/rest?expires=30d", {
+    method: "PUT", body, signal, referrerPolicy: "no-referrer",
+  });
+  if (!response.ok) throw new Error("Não foi possível criar o link público. Tente novamente.");
+  const data = await response.json();
+  const url = new URL(data.url);
+  if (url.origin !== "https://waifuvault.moe" || !url.pathname.startsWith("/f/")) {
+    throw new Error("O armazenamento não retornou um link público para o arquivo.");
+  }
+  return url;
+}
+
+async function uploadMedia(draft, mime, signal) {
+  if (uploadedFiles.has(draft.file)) return uploadedFiles.get(draft.file);
+  const url = hasCloudStorage ? await uploadToCloud(draft, signal) : await uploadPublicMedia(draft, mime, signal);
+  uploadedFiles.set(draft.file, url.href);
+  return url.href;
 }
 
 function getAppearance() {
@@ -180,7 +256,10 @@ function updatePreviewState() {
   let state = active.isExample ? "example" : "ready";
   let message = "Aponte a câmera do celular para testar.";
 
-  if (changed) {
+  if (pendingUpload) {
+    state = "uploading";
+    message = "Enviando o arquivo para gerar seu QR Code.";
+  } else if (changed) {
     state = "pending";
     message = "Gere novamente para atualizar o conteúdo da prévia.";
   } else if (pendingRequest) {
@@ -195,9 +274,15 @@ function updatePreviewState() {
   status.dataset.state = state;
   status.textContent = statusLabels[state];
   byId("preview-note-text").textContent = message;
-  byId("preview-note").querySelector(".icon").hidden = state === "pending" || state === "loading";
+  byId("preview-note").querySelector(".icon").hidden = state === "pending" || state === "uploading" || state === "loading";
   canvas.setAttribute("aria-label", active.isExample ? "Prévia do QR Code de exemplo" : "Prévia do QR Code gerado");
-  downloadButton.disabled = changed || !!pendingRequest || !previewAvailable || !validColors || downloading;
+  generateButton.disabled = !!pendingUpload;
+  downloadButton.disabled = changed || !!pendingUpload || !!pendingRequest || !previewAvailable || !validColors || downloading;
+  previewMediaLink.hidden = state !== "ready" || !mediaInputs[active.type];
+  if (!previewMediaLink.hidden) {
+    previewMediaLink.href = active.payload;
+    previewMediaLink.textContent = active.type === "image" ? "Abrir imagem" : "Abrir áudio";
+  }
 }
 
 function updateAppearance() {
@@ -219,11 +304,16 @@ function updateAppearance() {
 }
 
 function updateDraft() {
-  const { type } = getDraft();
+  const { type, source } = getDraft();
   const isLink = type === "link";
   byId("link-label").hidden = !isLink;
   byId("link-wrap").hidden = !isLink;
-  byId("text-wrap").hidden = isLink;
+  byId("text-wrap").hidden = type !== "text";
+  for (const [mediaType, { wrap }] of Object.entries(mediaInputs)) wrap.hidden = type !== mediaType;
+  if (pendingUpload && (pendingUpload.type !== type || pendingUpload.file !== source)) {
+    pendingUpload.controller.abort();
+    pendingUpload = undefined;
+  }
   byId("text-count").textContent = `${textInput.value.length} / ${textInput.maxLength}`;
   showContentError();
   downloadError.hidden = true;
@@ -232,10 +322,13 @@ function updateDraft() {
 
 editor.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (pendingUpload) return;
   const draft = getDraft();
+  let mime;
   let payload;
   try {
-    payload = validateContent(draft);
+    if (draft.file) mime = validateFile(draft.file, draft.type);
+    else payload = validateContent(draft);
   } catch (error) {
     showContentError(error.message, draft.input);
     draft.input.focus();
@@ -248,8 +341,37 @@ editor.addEventListener("submit", async (event) => {
   }
 
   showContentError();
+  if (draft.file) {
+    const controller = new AbortController();
+    const upload = { type: draft.type, file: draft.file, controller };
+    pendingUpload = upload;
+    const timeout = setTimeout(() => controller.abort(), 120_000);
+    updatePreviewState();
+
+    try {
+      payload = await uploadMedia(draft, mime, controller.signal);
+      if (pendingUpload !== upload) return;
+    } catch (error) {
+      if (pendingUpload === upload) {
+        const message = error instanceof TypeError || error instanceof SyntaxError || controller.signal.aborted
+          ? "Não foi possível enviar o arquivo. Tente novamente."
+          : error.message;
+        showContentError(message, draft.input);
+        draft.input.focus();
+      }
+      return;
+    } finally {
+      clearTimeout(timeout);
+      if (pendingUpload === upload) {
+        pendingUpload = undefined;
+        updatePreviewState();
+      }
+    }
+  }
+
   active = { type: draft.type, source: draft.source, payload, isExample: false };
   updateAppearance();
+  if (mediaInputs[draft.type]) return;
   const look = getAppearance();
   const request = new AbortController();
   pendingRequest = request;
@@ -280,6 +402,31 @@ editor.addEventListener("submit", async (event) => {
 });
 
 for (const input of [linkInput, textInput]) input.addEventListener("input", updateDraft);
+function setMediaLinkOpen({ linkToggle, linkOption }, open) {
+  linkOption.hidden = !open;
+  linkToggle.setAttribute("aria-expanded", String(open));
+}
+
+for (const media of Object.values(mediaInputs)) {
+  const { url, file, linkToggle, linkOption } = media;
+  linkToggle.addEventListener("click", () => {
+    const open = linkOption.hidden;
+    setMediaLinkOpen(media, open);
+    updateDraft();
+    if (open) url.focus();
+  });
+  url.addEventListener("input", () => {
+    if (url.value.trim()) file.value = "";
+    updateDraft();
+  });
+  file.addEventListener("change", () => {
+    if (file.files.length) {
+      url.value = "";
+      setMediaLinkOpen(media, false);
+    }
+    updateDraft();
+  });
+}
 for (const option of document.querySelectorAll('[name="content-type"]')) option.addEventListener("change", updateDraft);
 for (const option of document.querySelectorAll('[name="style"], #size, #correction')) option.addEventListener("change", updateAppearance);
 

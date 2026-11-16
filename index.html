@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f9f6">
-  <meta name="description" content="Gere QR Codes para links e textos, personalize a aparência e baixe em PNG, JPG ou PDF.">
+  <meta name="description" content="Gere QR Codes para links, textos, imagens e áudios. Personalize e baixe em PNG, JPG ou PDF.">
+  <meta name="qrs-storage-cloud" content="">
+  <meta name="qrs-storage-preset" content="">
   <title>QRs Code — Gerador de QR Code</title>
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
   <link rel="stylesheet" href="styles.css">
@@ -28,7 +30,7 @@
     <section class="hero" aria-labelledby="page-title">
       <div>
         <h1 id="page-title">QR Code <em>do seu jeito.</em></h1>
-        <p>Transforme qualquer link ou texto em um QR Code personalizado.</p>
+        <p>Transforme links, textos, imagens e áudios em QR Codes personalizados.</p>
       </div>
       <div class="hero-pattern" aria-hidden="true">
         <span class="hero-tile tile-outline"><span></span></span>
@@ -54,6 +56,14 @@
             <input type="radio" name="content-type" value="text">
             <span><span class="icon" aria-hidden="true">notes</span> Texto</span>
           </label>
+          <label class="choice">
+            <input type="radio" name="content-type" value="image">
+            <span><span class="icon" aria-hidden="true">image</span> Imagem</span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="content-type" value="audio">
+            <span><span class="sound-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span> Áudio</span>
+          </label>
         </fieldset>
 
         <div class="content-field">
@@ -66,6 +76,44 @@
             <label class="field-label" for="text-value">Seu texto</label>
             <textarea id="text-value" maxlength="500" rows="2" placeholder="Digite o texto que deseja incluir no QR Code" aria-describedby="text-count content-error"></textarea>
             <span class="text-counter" id="text-count">0 / 500</span>
+          </div>
+          <div id="image-wrap" hidden>
+            <div class="media-upload">
+              <label class="field-label" for="image-file">Enviar imagem do dispositivo</label>
+              <input id="image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif" aria-describedby="image-file-help content-error">
+              <p class="field-help" id="image-file-help">PNG, JPG, WebP ou GIF até 10 MB. Quem tiver o QR Code poderá abrir a imagem.</p>
+            </div>
+            <button type="button" class="button button-red media-link-button" id="image-link-toggle" aria-expanded="false" aria-controls="image-link-option">
+              <span class="icon" aria-hidden="true">link</span> Usar um link público
+              <span class="icon media-link-chevron" aria-hidden="true">expand_more</span>
+            </button>
+            <div class="media-link-option" id="image-link-option" hidden>
+              <label class="field-label" for="image-value">Link da imagem</label>
+              <div class="input-wrap">
+                <span class="icon" aria-hidden="true">link</span>
+                <input id="image-value" type="url" inputmode="url" placeholder="https://seusite.com/imagem.jpg" maxlength="1500" aria-describedby="image-help content-error" spellcheck="false">
+              </div>
+              <p class="field-help" id="image-help">Use um link acessível sem login.</p>
+            </div>
+          </div>
+          <div id="audio-wrap" hidden>
+            <div class="media-upload">
+              <label class="field-label" for="audio-file">Enviar áudio do dispositivo</label>
+              <input id="audio-file" type="file" accept="audio/*,.mp3,.wav,.ogg,.oga,.opus,.m4a,.flac" aria-describedby="audio-file-help content-error">
+              <p class="field-help" id="audio-file-help">MP3, WAV, OGG, Opus, M4A ou FLAC até 25 MB. Quem tiver o QR Code poderá ouvir o áudio.</p>
+            </div>
+            <button type="button" class="button button-red media-link-button" id="audio-link-toggle" aria-expanded="false" aria-controls="audio-link-option">
+              <span class="icon" aria-hidden="true">link</span> Usar um link público
+              <span class="icon media-link-chevron" aria-hidden="true">expand_more</span>
+            </button>
+            <div class="media-link-option" id="audio-link-option" hidden>
+              <label class="field-label" for="audio-value">Link do áudio</label>
+              <div class="input-wrap">
+                <span class="icon" aria-hidden="true">link</span>
+                <input id="audio-value" type="url" inputmode="url" placeholder="https://seusite.com/audio.mp3" maxlength="1500" aria-describedby="audio-help content-error" spellcheck="false">
+              </div>
+              <p class="field-help" id="audio-help">Use um link acessível sem login.</p>
+            </div>
           </div>
           <p id="content-error" class="message error" role="alert" hidden></p>
         </div>
@@ -158,6 +206,7 @@
           <div class="qr-paper"><canvas id="qr-preview" width="1024" height="1024" role="img" aria-label="Prévia do QR Code de exemplo"></canvas></div>
         </div>
         <p class="preview-note" id="preview-note" aria-live="polite"><span class="icon" aria-hidden="true">check</span><span id="preview-note-text">Aponte a câmera do celular para testar.</span></p>
+        <a id="preview-media-link" class="preview-media-link" target="_blank" rel="noopener noreferrer" hidden>Abrir arquivo</a>
 
         <fieldset class="formats">
           <legend class="field-label">Formato do arquivo</legend>
