@@ -67,11 +67,9 @@ legend { padding: 0; }
 
 .shell { width: min(1180px, calc(100% - 64px)); margin-inline: auto; }
 .site-header { background: rgb(255 255 255 / 88%); border-bottom: 1px solid var(--line); }
-.header-inner { display: flex; justify-content: space-between; align-items: center; min-height: 70px; }
+.header-inner { display: flex; align-items: center; min-height: 70px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font: 780 25px/1 var(--heading); letter-spacing: -.8px; color: var(--forest); }
 .brand-icon { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 10px; color: white; background: var(--flag-red); font-size: 25px; }
-nav { font-size: 14px; font-weight: 650; }
-.nav-current { color: var(--forest); }
 
 .hero { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 45px 0 34px; }
 h1, h2, p { margin: 0; }
@@ -236,7 +234,6 @@ textarea { display: block; width: 100%; min-height: 70px; padding: 10px 12px; re
   .header-inner { min-height: 61px; }
   .brand { font-size: 23px; }
   .brand-icon { width: 35px; height: 35px; }
-  nav { font-size: 13px; }
   .hero { padding: 32px 0 24px; }
   .hero h1 { font-size: clamp(43px, 9vw, 65px); line-height: .99; }
   .hero em { display: block; }
